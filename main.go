@@ -7,12 +7,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -52,16 +50,16 @@ func FizzbuzzAlgo(d Data) string {
 
 func FizzbuzzCheckData(d Data) error {
 	if d.Int1 <= 0 {
-		return errors.New("int1 should by greater than zero")
+		return errors.New("int1 should by greater than zero\n")
 	}
 	if d.Int2 <= 0 {
-		return errors.New("int2 should by greater than zero")
+		return errors.New("int2 should by greater than zero\n")
 	}
 	if d.Str1 == "" {
-		return errors.New("str1 is empty")
+		return errors.New("str1 is empty\n")
 	}
 	if d.Str2 == "" {
-		return errors.New("str2 is empty")
+		return errors.New("str2 is empty\n")
 	}
 	return nil
 }
@@ -80,17 +78,19 @@ func FizzbuzzCheckEncoding(acceptEncoding string) (error, string) {
 			}
 		}
 	}
-	return errors.New(fmt.Sprintf("Bad Accept-encoding, can be %v", contentTypeResponse)), ""
+	return errors.New(fmt.Sprintf("Bad Accept-encoding, can be %v\n", contentTypeResponse)), ""
 }
 
+//add protobuf implementation
+//http.Error(w, "Content-Type header must be application/json", http.StatusUnsupportedMediaType)
 func FizzbuzzGetData(req *http.Request) (error, Data) {
 	var d Data
 
 	if req.Body == nil || req.Body == http.NoBody {
-		return errors.New("Please send a request body"), d
+		return errors.New("Please send a request body\n"), d
 	}
 	if req.Header.Get("Content-Type") != "application/json" {
-		return errors.New("Content-Type should be 'application/json'"), d
+		return errors.New("Content-Type should be 'application/json'\n"), d
 	}
 	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
 		return err, d
@@ -98,29 +98,42 @@ func FizzbuzzGetData(req *http.Request) (error, Data) {
 	return nil, d
 }
 
-func FizzbuzzHandle(w http.ResponseWriter, req *http.Request) {
+func FizzbuzzHandle(w http.ResponseWriter, req *http.Request) (error, int) {
 	err, d := FizzbuzzGetData(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return err, http.StatusBadRequest
 	}
 
-	fmt.Println("data request:", d)
+	log.Println("Request Data: ", d)
 	if err := FizzbuzzCheckData(d); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return err, http.StatusBadRequest
 	}
 
 	err, contentType := FizzbuzzCheckEncoding(req.Header.Get("Accept-encoding"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotAcceptable)
-		return
+		return err, http.StatusNotAcceptable
 	}
 	w.Header().Set("Content-type", contentType)
 	fmt.Fprintln(w, FizzbuzzAlgo(d))
+	return err, http.StatusOK
 }
 
-//        http.Error(w, "Content-Type header must be application/json", http.StatusUnsupportedMediaType)
+func FizzbuzzLog(w http.ResponseWriter, req *http.Request) {
+	log.Println("Local Timestamp: ", time.Now())
+	log.Println("Request Method: ", req.Method)
+	log.Println("Request Url: ", req.URL)
+	log.Println("Request Header: ", req.Header)
+	err, statusCode := FizzbuzzHandle(w, req)
+	log.Println("Response Status Code: ", statusCode)
+	log.Println("Response Header: ", w.Header())
+	if err != nil {
+		log.Println("Error: ", err.Error())
+	}
+}
+
 func main() {
 	router := mux.NewRouter()
 	serv := &http.Server{
@@ -129,8 +142,7 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	handlers.LoggingHandler(os.Stdout, router)
-	router.HandleFunc("/fizz-buzz", FizzbuzzHandle).Methods(http.MethodPost)
+	router.HandleFunc("/fizz-buzz", FizzbuzzLog).Methods(http.MethodPost)
 	log.Println("Listening on :8080")
 	log.Fatal(serv.ListenAndServe())
 }
