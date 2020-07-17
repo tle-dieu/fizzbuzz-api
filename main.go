@@ -7,8 +7,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 type Data struct {
@@ -84,8 +89,8 @@ func FizzbuzzGetData(req *http.Request) (error, Data) {
 	if req.Body == nil || req.Body == http.NoBody {
 		return errors.New("Please send a request body"), d
 	}
-	if req.Header.Get("Content-type") != "application/json" {
-		return errors.New("Content-type should be 'application/json'"), d
+	if req.Header.Get("Content-Type") != "application/json" {
+		return errors.New("Content-Type should be 'application/json'"), d
 	}
 	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
 		return err, d
@@ -93,30 +98,39 @@ func FizzbuzzGetData(req *http.Request) (error, Data) {
 	return nil, d
 }
 
-func FizzbuzzHandlePost(w http.ResponseWriter, req *http.Request) {
-
+func FizzbuzzHandle(w http.ResponseWriter, req *http.Request) {
 	err, d := FizzbuzzGetData(req)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	fmt.Println("data request:", d)
 	if err := FizzbuzzCheckData(d); err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	err, contentType := FizzbuzzCheckEncoding(req.Header.Get("Accept-encoding"))
 	if err != nil {
-		http.Error(w, err.Error(), 406)
+		http.Error(w, err.Error(), http.StatusNotAcceptable)
 		return
 	}
 	w.Header().Set("Content-type", contentType)
 	fmt.Fprintln(w, FizzbuzzAlgo(d))
 }
 
+//        http.Error(w, "Content-Type header must be application/json", http.StatusUnsupportedMediaType)
 func main() {
-	http.HandleFunc("/fizz-buzz", FizzbuzzHandlePost)
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Println(err)
+	router := mux.NewRouter()
+	serv := &http.Server{
+		Handler:      router,
+		Addr:         "127.0.0.1:8080",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
 	}
+	handlers.LoggingHandler(os.Stdout, router)
+	router.HandleFunc("/fizz-buzz", FizzbuzzHandle).Methods(http.MethodPost)
+	log.Println("Listening on :8080")
+	log.Fatal(serv.ListenAndServe())
 }
