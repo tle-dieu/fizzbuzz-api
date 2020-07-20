@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	// "github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
 )
 
@@ -50,75 +51,82 @@ func FizzbuzzAlgo(d Data) string {
 
 func FizzbuzzCheckData(d Data) error {
 	if d.Int1 <= 0 {
-		return errors.New("int1 should by greater than zero\n")
+		return errors.New("int1 should by greater than zero")
 	}
 	if d.Int2 <= 0 {
-		return errors.New("int2 should by greater than zero\n")
+		return errors.New("int2 should by greater than zero")
 	}
 	if d.Str1 == "" {
-		return errors.New("str1 is empty\n")
+		return errors.New("str1 is empty")
 	}
 	if d.Str2 == "" {
-		return errors.New("str2 is empty\n")
+		return errors.New("str2 is empty")
 	}
 	return nil
 }
 
-func FizzbuzzCheckEncoding(acceptEncoding string) (error, string) {
+func FizzbuzzCheckEncoding(acceptEncoding string) (string, error) {
 	contentTypeResponse := [...]string{"application/json", "application/protobuf", "application/xml"}
 	arrAcceptEncoding := strings.Split(acceptEncoding, ",")
 
 	if len(arrAcceptEncoding) == 0 || strings.TrimSpace(arrAcceptEncoding[0]) == "" {
-		return nil, contentTypeResponse[0]
+		return contentTypeResponse[0], nil
 	}
 	for _, v := range arrAcceptEncoding {
 		for _, contentType := range contentTypeResponse {
 			if strings.TrimSpace(v) == contentType {
-				return nil, contentType
+				return contentType, nil
 			}
 		}
 	}
-	return errors.New(fmt.Sprintf("Bad Accept-encoding, can be %v\n", contentTypeResponse)), ""
+	return "", fmt.Errorf("Bad Accept-encoding, can be %v", contentTypeResponse)
 }
 
 //add protobuf implementation
 //http.Error(w, "Content-Type header must be application/json", http.StatusUnsupportedMediaType)
-func FizzbuzzGetData(req *http.Request) (error, Data) {
+func FizzbuzzGetData(req *http.Request) (Data, error) {
 	var d Data
+	var err error
 
 	if req.Body == nil || req.Body == http.NoBody {
-		return errors.New("Please send a request body\n"), d
+		return d, errors.New("Please send a request body")
 	}
-	if req.Header.Get("Content-Type") != "application/json" {
-		return errors.New("Content-Type should be 'application/json'\n"), d
+	contentType := req.Header.Get("Content-Type")
+	if contentType == "application/json" {
+		err = json.NewDecoder(req.Body).Decode(&d)
+	} else if contentType == "application/protobuf" {
+		fmt.Println("decode protobuf")
+		// err = proto.Unmarshal(req.Body, &d)
+	} else {
+		fmt.Println("NO")
 	}
-	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
-		return err, d
+	if err != nil {
+		return d, err
 	}
-	return nil, d
+	return d, nil
 }
 
-func FizzbuzzHandle(w http.ResponseWriter, req *http.Request) (error, int) {
-	err, d := FizzbuzzGetData(req)
+func FizzbuzzHandle(w http.ResponseWriter, req *http.Request) (int, error) {
+	d, err := FizzbuzzGetData(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return err, http.StatusBadRequest
+		return http.StatusBadRequest, err
 	}
 
 	log.Println("Request Data: ", d)
 	if err := FizzbuzzCheckData(d); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return err, http.StatusBadRequest
+		return http.StatusBadRequest, err
 	}
 
-	err, contentType := FizzbuzzCheckEncoding(req.Header.Get("Accept-encoding"))
+	contentType, err := FizzbuzzCheckEncoding(req.Header.Get("Accept-encoding"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotAcceptable)
-		return err, http.StatusNotAcceptable
+		return http.StatusNotAcceptable, err
 	}
 	w.Header().Set("Content-type", contentType)
 	fmt.Fprintln(w, FizzbuzzAlgo(d))
-	return err, http.StatusOK
+	return http.StatusOK, err
 }
 
 func FizzbuzzLog(w http.ResponseWriter, req *http.Request) {
@@ -126,7 +134,7 @@ func FizzbuzzLog(w http.ResponseWriter, req *http.Request) {
 	log.Println("Request Method: ", req.Method)
 	log.Println("Request Url: ", req.URL)
 	log.Println("Request Header: ", req.Header)
-	err, statusCode := FizzbuzzHandle(w, req)
+	statusCode, err := FizzbuzzHandle(w, req)
 	log.Println("Response Status Code: ", statusCode)
 	log.Println("Response Header: ", w.Header())
 	if err != nil {
