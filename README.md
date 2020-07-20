@@ -1,1 +1,1 @@
-# fizzup-api
+# fizzbuzz-api

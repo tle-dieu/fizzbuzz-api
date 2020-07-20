@@ -1,4 +1,4 @@
-module github.com/tle-dieu/fizzup-api
+module github.com/tle-dieu/fizzbuzz-api
 
 go 1.13
 
