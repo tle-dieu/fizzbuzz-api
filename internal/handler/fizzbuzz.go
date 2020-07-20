@@ -29,7 +29,7 @@ func fizzbuzzCheckResponseType(acceptEncoding string) (string, error) {
 
 //add protobuf implementation
 //http.Error(w, "Content-Type header must be application/json", http.StatusUnsupportedMediaType)
-func FizzbuzzGetDataRequest(req *http.Request) (fizzbuzz.Data, error) {
+func fizzbuzzGetDataRequest(req *http.Request) (fizzbuzz.Data, error) {
 	var d fizzbuzz.Data
 	var err error
 

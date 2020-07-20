@@ -6,9 +6,9 @@ import (
 	"net/http"
 )
 
-//Handler handle a fizzbuzz request (/fizzbuzz)
+//Fizzbuzz handle a fizzbuzz request (/fizzbuzz)
 func Fizzbuzz(w http.ResponseWriter, req *http.Request) {
-	d, err := FizzbuzzGetDataRequest(req)
+	d, err := fizzbuzzGetDataRequest(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
