@@ -129,6 +129,7 @@ func FizzbuzzHandle(w http.ResponseWriter, req *http.Request) (int, error) {
 	return http.StatusOK, err
 }
 
+//change fizzbuzzlog (not clean)
 func FizzbuzzLog(w http.ResponseWriter, req *http.Request) {
 	log.Println("Local Timestamp: ", time.Now())
 	log.Println("Request Method: ", req.Method)
@@ -150,7 +151,8 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	router.HandleFunc("/fizz-buzz", FizzbuzzLog).Methods(http.MethodPost)
+	// router.HandleFunc("/fizz-buzz", FizzbuzzLog).Methods(http.MethodPost)
+	router.HandleFunc("/fizzbuzz", FizzbuzzLog).Methods(http.MethodPost)
 	log.Println("Listening on :8080")
 	log.Fatal(serv.ListenAndServe())
 }
