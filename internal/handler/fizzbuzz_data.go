@@ -4,16 +4,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/tle-dieu/fizzbuzz-api/pkg/fizzbuzz"
+	"io/ioutil"
 	"net/http"
 	"strings"
-	// "github.com/golang/protobuf/proto"
+
+	"github.com/tle-dieu/fizzbuzz-api/internal/protobuf"
+	"github.com/tle-dieu/fizzbuzz-api/pkg/fizzbuzz"
+	"google.golang.org/protobuf/proto"
 )
 
 func fizzbuzzCheckResponseType(acceptEncoding string) (string, error) {
 	contentTypeResponse := [...]string{"application/json", "application/protobuf", "application/xml"}
 	arrAcceptEncoding := strings.Split(acceptEncoding, ",")
 
+	fmt.Println(acceptEncoding)
 	if len(arrAcceptEncoding) == 0 || strings.TrimSpace(arrAcceptEncoding[0]) == "" {
 		return contentTypeResponse[0], nil
 	}
@@ -27,8 +31,16 @@ func fizzbuzzCheckResponseType(acceptEncoding string) (string, error) {
 	return "", fmt.Errorf("Bad Accept-encoding, can be %v", contentTypeResponse)
 }
 
-//add protobuf implementation
-//http.Error(w, "Content-Type header must be application/json", http.StatusUnsupportedMediaType)
+func fizzbuzzProtoToJson(protoReq *protobuf.Data, d *fizzbuzz.Data) {
+	d.Str1 = protoReq.GetStr1()
+	d.Str2 = protoReq.GetStr2()
+	d.Int1 = int(protoReq.GetInt1())
+	d.Int2 = int(protoReq.GetInt2())
+	d.Limit = int(protoReq.GetLimit())
+	fmt.Println(protoReq.GetStr1(), protoReq.GetStr2(), int(protoReq.GetInt1()), int(protoReq.GetInt2()), int(protoReq.GetLimit()))
+	fmt.Println(d)
+}
+
 func fizzbuzzGetDataRequest(req *http.Request) (fizzbuzz.Data, error) {
 	var d fizzbuzz.Data
 	var err error
@@ -40,8 +52,14 @@ func fizzbuzzGetDataRequest(req *http.Request) (fizzbuzz.Data, error) {
 	if contentType == "application/json" {
 		err = json.NewDecoder(req.Body).Decode(&d)
 	} else if contentType == "application/protobuf" {
-		fmt.Println("decode protobuf")
-		// err = proto.Unmarshal(req.Body, &d)
+		protoReq := &protobuf.Data{}
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			err = errors.New("Unable to read message from request : " + err.Error())
+		} else {
+			err = proto.Unmarshal(body, protoReq)
+			fizzbuzzProtoToJson(protoReq, &d)
+		}
 	} else {
 		err = errors.New("Content-Type must be application/json or application/protobuf")
 	}

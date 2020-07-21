@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/tle-dieu/fizzbuzz-api/pkg/fizzbuzz"
@@ -26,5 +25,5 @@ func Fizzbuzz(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Header().Set("Content-type", contentType)
-	fmt.Fprintln(w, fizzbuzz.FizzbuzzAlgo(d))
+	w.Write([]byte(fizzbuzz.FizzbuzzAlgo(d)))
 }
