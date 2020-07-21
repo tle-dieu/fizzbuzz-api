@@ -6,14 +6,6 @@ import (
 	"strconv"
 )
 
-type Data struct {
-	Str1  string
-	Str2  string
-	Int1  int
-	Int2  int
-	Limit int
-}
-
 func FizzbuzzAlgo(d Data) string {
 	var response bytes.Buffer
 	var write bool

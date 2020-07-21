@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = ".;protobuf";
+
+message Data {
+    string Str1 = 1;
+    string Str2 = 2;
+    int32 Int1 = 3;
+    int32 Int2 = 4;
+    int32 Limit = 5;
+}
