@@ -2,8 +2,9 @@ package handler
 
 import (
 	"fmt"
-	"github.com/tle-dieu/fizzbuzz-api/pkg/fizzbuzz"
 	"net/http"
+
+	"github.com/tle-dieu/fizzbuzz-api/pkg/fizzbuzz"
 )
 
 //Fizzbuzz handle a fizzbuzz request (/fizzbuzz)
