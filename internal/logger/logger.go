@@ -24,14 +24,16 @@ func WrapHandlerWithLogging(wrappedHandler http.Handler) http.HandlerFunc {
 		lrw := &loggingResponseWriter{w, http.StatusOK}
 		log.Println("Local Timestamp: ", time.Now())
 		log.Printf("Request: [method: %s, URL: %s, header: %s]\n", req.Method, req.URL, req.Header)
-		body, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		if req.ContentLength < 200 {
+			body, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+			log.Printf("Data Request: %q\n", body)
 		}
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 		wrappedHandler.ServeHTTP(lrw, req)
-		log.Printf("Data Request: %q\n", body)
 		log.Printf("Response: [header: %s, status: %d]\n", w.Header(), lrw.statusCode)
 	}
 }
